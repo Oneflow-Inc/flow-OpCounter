@@ -1,10 +1,6 @@
-# THOP: Oneflow-OpCounter
+# FlowOP: flow-OpCounter
 
 ## How to install 
-    
-`pip install thop` (now continously intergrated on [Github actions](https://github.com/features/actions))
-
-OR
 
 `pip install --upgrade git+https://github.com/Oneflow-Inc/flow-OpCounter.git`
     
@@ -38,7 +34,7 @@ OR
     macs, params = clever_format([macs, params], "%.3f")
     ```    
     
-## Results of Recent Models
+## Results of Recent Models (TODO)
 
 The implementation are adapted from `flowvision`. Following results can be obtained using [benchmark/evaluate_famous_models.py](benchmark/evaluate_famous_models.py).
 
