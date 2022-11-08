@@ -8,8 +8,7 @@ from setuptools.command.install import install
 
 readme = open("README.md").read()
 
-fp = open("thop/__version__.py", "r").read()
-VERSION = eval(fp.strip().split()[-1])
+VERSION = "0.0.1"
 
 requirements = [
     "oneflow",
