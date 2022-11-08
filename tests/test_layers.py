@@ -30,7 +30,7 @@ class TestLayers(unittest.TestCase):
         assert int(flops) == 3 * 3 * 224 * 224 * 128 * 1
 
     def test_linear_case1(self):
-        n, in_c, out_c = 1, 100, 200
+        n, in_c, out_c = 5, 100, 200
         net = nn.Linear(in_c, out_c, bias=False)
         flops, params = get_model_complexity_info(
             net, (n, in_c),
@@ -42,15 +42,15 @@ class TestLayers(unittest.TestCase):
 
     def test_linear_case2(self):
         for i in range(10):
-            in_c, out_c = oneflow.randint(1, 500, (2,)).tolist()
+            n, in_c, out_c = oneflow.randint(1, 500, (3,)).tolist()
             net = nn.Linear(in_c, out_c)
             flops, params = get_model_complexity_info(
-                net, (1, in_c),
+                net, (n, in_c),
                 as_strings=False,
                 print_per_layer_stat=False
             )
             assert params == in_c * out_c + out_c
-            assert int(flops) == in_c * out_c + out_c
+            assert int(flops) == n * in_c * out_c + out_c
 
     def test_relu(self):
         n, in_c = 1, 100

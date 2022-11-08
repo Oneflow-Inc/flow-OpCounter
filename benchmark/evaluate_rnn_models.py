@@ -59,14 +59,14 @@ for name, model in models.items():
     )
 
 # validate batch_first support
-inputs = flow.randn(100, 32, input_size)
-ops_time_first, params_time_first = profile(
+inputs = flow.randn(1, 32, input_size)
+ops_time_first, params_time_first = get_model_complexity_info(
     nn.Sequential(nn.LSTM(input_size, hidden_size)), 
     tuple(inputs.shape), 
     as_strings=False,
     print_per_layer_stat=False
 )
-ops_batch_first, params_batch_first = flops, params = get_model_complexity_info(
+ops_batch_first, params_batch_first = get_model_complexity_info(
     nn.Sequential(nn.LSTM(input_size, hidden_size, batch_first=True)), 
     tuple(inputs.transpose(0, 1).shape),
     as_strings=False,

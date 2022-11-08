@@ -30,9 +30,10 @@ def relu_flops_counter_hook(module, input, output):
 
 def linear_flops_counter_hook(module, input, output):
     input = input[0]
+    batch_size = input.shape[0]
     output_last_dim = output.shape[-1]
     bias_flops = output_last_dim if module.bias is not None else 0
-    module.__flops__ += int(np.prod(input.shape) * output_last_dim + bias_flops)
+    module.__flops__ += int((np.prod(input.shape) * output_last_dim + bias_flops) * batch_size)
 
 
 def pool_flops_counter_hook(module, input, output):
@@ -111,9 +112,9 @@ def rnn_flops_counter_hook(rnn_module, input, output):
     """
     flops = 0
     # input is a tuple containing a sequence to process and (optionally) hidden state
-    inp = input[0]
-    batch_size = inp.shape[0]
-    seq_length = inp.shape[1]
+    input = input[0]
+    batch_size = input.shape[0]
+    seq_length = input.shape[1]
     num_layers = rnn_module.num_layers
 
     for i in range(num_layers):
@@ -138,11 +139,11 @@ def rnn_flops_counter_hook(rnn_module, input, output):
 
 def rnn_cell_flops_counter_hook(rnn_cell_module, input, output):
     flops = 0
-    inp = input[0]
-    batch_size = inp.shape[0]
+    input = input[0]
+    batch_size = input.shape[0]
     w_ih = rnn_cell_module.__getattr__('weight_ih')
     w_hh = rnn_cell_module.__getattr__('weight_hh')
-    input_size = inp.shape[1]
+    input_size = input.shape[1]
     flops = rnn_flops(flops, rnn_cell_module, w_ih, w_hh, input_size)
     if rnn_cell_module.bias:
         b_ih = rnn_cell_module.__getattr__('bias_ih')
