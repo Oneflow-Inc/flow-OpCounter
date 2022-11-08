@@ -70,9 +70,7 @@ def conv_flops_counter_hook(conv_module, input, output):
     overall_conv_flops = conv_per_position_flops * active_elements_count
 
     bias_flops = 0
-
     if conv_module.bias is not None:
-
         bias_flops = out_channels * active_elements_count
 
     overall_flops = overall_conv_flops + bias_flops

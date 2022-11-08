@@ -1,6 +1,9 @@
 import oneflow as flow
 import oneflow.nn as nn
-from thop.profile import profile
+import sys
+sys.path.append("./")
+from flowflops import get_model_complexity_info
+
 
 input_size = 160
 hidden_size = 512
@@ -36,25 +39,38 @@ for name, model in models.items():
     # time_first dummy inputs
     inputs = flow.randn(100, 32, input_size)
     if name.find("Cell") != -1:
-        total_ops, total_params = profile(model, (inputs[0],), verbose=False)
+        total_ops, total_params = get_model_complexity_info(
+            model, tuple(inputs[0].shape),
+            as_strings=False,
+            print_per_layer_stat=False
+        )
     else:
-        total_ops, total_params = profile(model, (inputs,), verbose=False)
+        total_ops, total_params = get_model_complexity_info(
+            model, tuple(inputs.shape),
+            as_strings=False,
+            print_per_layer_stat=False
+        )
     print(
         "{} | {:.2f} | {:.2f}".format(
             name,
-            total_params / 1e6,
-            total_ops / 1e9,
+            total_params,
+            total_ops,
         )
     )
 
 # validate batch_first support
 inputs = flow.randn(100, 32, input_size)
-ops_time_first = profile(
-    nn.Sequential(nn.LSTM(input_size, hidden_size)), (inputs,), verbose=False
-)[0]
-ops_batch_first = profile(
-    nn.Sequential(nn.LSTM(input_size, hidden_size, batch_first=True)),
-    (inputs.transpose(0, 1),),
-    verbose=False,
-)[0]
+ops_time_first, params_time_first = profile(
+    nn.Sequential(nn.LSTM(input_size, hidden_size)), 
+    tuple(inputs.shape), 
+    as_strings=False,
+    print_per_layer_stat=False
+)
+ops_batch_first, params_batch_first = flops, params = get_model_complexity_info(
+    nn.Sequential(nn.LSTM(input_size, hidden_size, batch_first=True)), 
+    tuple(inputs.transpose(0, 1).shape),
+    as_strings=False,
+    print_per_layer_stat=False
+)
 assert ops_batch_first == ops_time_first
+assert params_batch_first == params_time_first

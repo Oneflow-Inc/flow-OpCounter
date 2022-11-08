@@ -38,18 +38,18 @@ def get_flops(
         verbose=verbose,
         ignore_list=ignore_modules
     )
-    if input_constructor:
+    if input_constructor is not None:
         input = input_constructor(input_res)
         flops_model(**input)
     else:
         try:
             batch = flow.ones(()).new_empty(
-                (1, *input_res),
+                input_res,
                 dtype=next(flops_model.parameters()).dtype,
                 device=next(flops_model.parameters()).device
             )
         except StopIteration:
-            batch = flow.ones(()).new_empty((1, *input_res))
+            batch = flow.ones(()).new_empty(input_res)
 
         flops_model(batch)
 
@@ -245,7 +245,6 @@ def batch_counter_hook(module, input, output):
         input = input[0]
         batch_size = len(input)
     else:
-        pass
         print('Warning! No positional inputs found for a module,'
               ' assuming batch size is 1.')
     module.__batch_counter__ += batch_size

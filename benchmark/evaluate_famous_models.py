@@ -1,6 +1,9 @@
 import oneflow as flow
 from flowvision import models
-from thop.profile import profile
+import sys
+sys.path.join("./")
+from flowflops import get_model_complexity_info
+
 
 model_names = sorted(
     name
@@ -22,8 +25,11 @@ for name in model_names:
     dsize = (1, 3, 224, 224)
     if "inception" in name:
         dsize = (1, 3, 299, 299)
-    inputs = flow.randn(dsize).to(device)
-    total_ops, total_params = profile(model, (inputs,), verbose=False)
+    total_ops, total_params = flops, params = get_model_complexity_info(
+        net, dsize,
+        as_strings=False,
+        print_per_layer_stat=False
+    )
     print(
-        "%s | %.2f | %.2f" % (name, total_params / (1000 ** 2), total_ops / (1000 ** 3))
+        "%s | %.2f | %.2f" % (name, total_params, total_ops)
     )

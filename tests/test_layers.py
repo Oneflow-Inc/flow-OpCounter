@@ -12,7 +12,7 @@ class TestLayers(unittest.TestCase):
     def test_conv(self):
         net = nn.Sequential(nn.Conv2d(64, 128, 3, 1, 1, bias=False))
         flops, params = get_model_complexity_info(
-            net, (64, 224, 224),
+            net, (3, 64, 224, 224),
             as_strings=False,
             print_per_layer_stat=False
         )
@@ -22,7 +22,7 @@ class TestLayers(unittest.TestCase):
     def test_group_conv(self):
         net = nn.Sequential(nn.Conv2d(64, 128, 3, 1, 1, groups=64, bias=False))
         flops, params = get_model_complexity_info(
-            net, (64, 224, 224),
+            net, (2, 64, 224, 224),
             as_strings=False,
             print_per_layer_stat=False
         )
@@ -42,15 +42,15 @@ class TestLayers(unittest.TestCase):
 
     def test_linear_case2(self):
         for i in range(10):
-            n, in_c, out_c = oneflow.randint(1, 500, (3,)).tolist()
+            in_c, out_c = oneflow.randint(1, 500, (2,)).tolist()
             net = nn.Linear(in_c, out_c)
             flops, params = get_model_complexity_info(
-                net, (n, in_c),
+                net, (1, in_c),
                 as_strings=False,
                 print_per_layer_stat=False
             )
             assert params == in_c * out_c + out_c
-            assert int(flops) == int(n * in_c * out_c + out_c)
+            assert int(flops) == in_c * out_c + out_c
 
     def test_relu(self):
         n, in_c = 1, 100
