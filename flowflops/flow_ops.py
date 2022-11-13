@@ -6,10 +6,77 @@ Copyright (C) 2021 Sovrasov V. - All Rights Reserved
  * this file. If not visit https://opensource.org/licenses/MIT
 """
 
+import math
 import numpy as np
 import oneflow.nn as nn
 
 
+# --------------------------------
+# For Graph
+# --------------------------------
+def conv_flops_counter(attr, input_strs, op_name2op_shape):
+    strides = attr["strides"].at_list_int32.val
+    padding = attr["padding_before"].at_list_int32.val
+    kernel_size = attr["kernel_size"].at_list_int32.val
+
+    input_shape = op_name2op_shape[input_strs["in"].s[0]]
+    kernel_shape = op_name2op_shape[input_strs["weight"].s[0]]
+
+    batch_size = input_shape[0]
+    in_dims = input_shape[2:]
+    output_dims = [
+        math.ceil((in_dims[0] - kernel_size[0] + 2 * padding[0]) / strides[0]) + 1,
+        math.ceil((in_dims[1] - kernel_size[1] + 2 * padding[1]) / strides[1]) + 1
+    ]
+    in_channels = input_shape[1]
+    out_channels = kernel_shape[0]
+
+    conv_per_position_flops = int(np.prod(kernel_size)) * in_channels * out_channels
+    active_elements_count = batch_size * int(np.prod(output_dims))
+
+    return int(conv_per_position_flops * active_elements_count)
+
+
+def pool_flops_counter(attr, input_strs, op_name2op_shape):
+    # also broadcast and relu
+    input_shape = op_name2op_shape[input_strs["x"].s[0]]
+    return int(np.prod(input_shape))
+
+
+# TODO(hujiakui): maybe wrong when `nn.Linear(64, 64)(4, 3, 64, 64)`
+def matmul_flops_counter(attr, input_strs, op_name2op_shape):
+    a_shape = op_name2op_shape[input_strs["a"].s[0]]
+    b_shape = op_name2op_shape[input_strs["b"].s[0]]
+    return int((np.prod(a_shape) * b_shape[0]) * a_shape[0])
+
+
+def add_n_flops_counter(attr, input_strs, op_name2op_shape):
+    in_shapes = []
+    for v in input_strs["in"].s:
+        in_shapes.append(op_name2op_shape[v])
+    return int(np.prod(input_shape) * (len(in_shapes) - 1))
+
+
+def bias_add_flops_counter(attr, input_strs, op_name2op_shape):
+    input_shape = op_name2op_shape[input_strs["a"].s[0]]
+    return int(np.prod(input_shape))
+
+
+def normalization_flops_counter(attr, input_strs, op_name2op_shape):
+    input_shape = op_name2op_shape[input_strs["x"].s[0]]
+    flops += int(np.prod(input_shape))
+    if hasattr(input_strs, "moving_mean") and hasattr(input_strs, "moving_variance"):
+        flops += int(np.prod(input_shape))
+
+
+def scalar_flops_counter(attr, input_strs, op_name2op_shape):
+    input_shape = op_name2op_shape[input_strs["in"].s[0]]
+    flops += int(np.prod(input_shape))
+
+
+# --------------------------------
+# For Eager
+# --------------------------------
 def empty_flops_counter_hook(module, input, output):
     module.__flops__ += 0
 
@@ -221,6 +288,51 @@ def multihead_attention_counter_hook(multihead_attention_module, input, output):
 
 
 CUSTOM_MODULES_MAPPING = {}
+
+GRAPH_FLOPS_COUNT_FUNC = {
+    # conv
+    "conv1d": conv_flops_counter,
+    "conv2d": conv_flops_counter,
+    "conv3d": conv_flops_counter,
+    # pool
+    "max_pool_1d": pool_flops_counter,
+    "max_pool_2d": pool_flops_counter,
+    "max_pool_3d": pool_flops_counter,
+    "avg_pool_1d": pool_flops_counter,
+    "avg_pool_2d": pool_flops_counter,
+    "avg_pool_3d": pool_flops_counter,
+    "adaptive_max_pool1d": pool_flops_counter,
+    "adaptive_max_pool2d": pool_flops_counter,
+    "adaptive_max_pool3d": pool_flops_counter,
+    "adaptive_avg_pool1d": pool_flops_counter,
+    "adaptive_avg_pool2d": pool_flops_counter,
+    "adaptive_avg_pool3d": pool_flops_counter,
+    "broadcast_add": pool_flops_counter,
+    "relu": pool_flops_counter,
+    "leaky_relu": pool_flops_counter,
+    "prelu": pool_flops_counter,
+    "elu": scalar_flops_counter,
+    # add
+    "bias_add": bias_add_flops_counter,
+    "add_n": add_n_flops_counter,
+    # matmul
+    "matmul": matmul_flops_counter,
+    # norm
+    "normalization": normalization_flops_counter,
+    # scalar
+    "scalar_mul": scalar_flops_counter,
+    "scalar_add": scalar_flops_counter,
+    "scalar_sub": scalar_flops_counter,
+    "scalar_div": scalar_flops_counter,
+    "var": scalar_flops_counter,
+    "sqrt": scalar_flops_counter,
+    "reduce_sum": scalar_flops_counter,
+    # broadcast
+    "broadcast_mul": pool_flops_counter,
+    "broadcast_add": pool_flops_counter,
+    "broadcast_sub": pool_flops_counter,
+    "broadcast_div": pool_flops_counter,
+}
 
 MODULES_MAPPING = {
     # convolutions

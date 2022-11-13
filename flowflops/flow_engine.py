@@ -6,17 +6,95 @@ Copyright (C) 2021 Sovrasov V. - All Rights Reserved
  * this file. If not visit https://opensource.org/licenses/MIT
 """
 
+import re
 import sys
 from functools import partial
 
 import oneflow as flow
 import oneflow.nn as nn
 
-from flowflops.flow_ops import CUSTOM_MODULES_MAPPING, MODULES_MAPPING
+from flowflops.flow_ops import CUSTOM_MODULES_MAPPING, MODULES_MAPPING, GRAPH_FLOPS_COUNT_FUNC
 from flowflops.utils import flops_to_string, params_to_string
 
 
-def get_flops(
+def get_graph_flops(
+    model,
+    input_res,
+    print_per_layer_stat=True,
+    input_constructor=None, 
+    ost=sys.stdout,
+    verbose=False, 
+    ignore_modules=[],
+    custom_modules_hooks={},
+    output_precision=3,
+    flops_units='GMac',
+    param_units='M'
+):
+    _, params = get_eager_flops(
+        model,
+        input_res,
+        input_constructor=verbose=False, 
+        ost=ost, 
+        ignore_modules=ignore_modules,
+        custom_modules_hooks=custom_modules_hooks,
+        output_precision=output_precision,
+        flops_units=flops_units,
+        param_units=param_units,
+        verbose=False
+        print_per_layer_stat=False
+    )
+    model.eval()
+
+    class ModelGraph(nn.Graph):
+        def __init__(self, model):
+            super().__init__()
+            self.model = model
+
+        def build(self, input):
+            return self.model(input)
+
+    # build graph
+    x = flow.rand(input_res)
+    graph = ModelGraph(model)
+    _ = graph(x)
+
+    # init
+    graph_str = repr(graph)
+    p_size = re.compile(r"size=\(.*?\)", re.S)
+    op_in = re.compile(r"\(.*?\) -> ", re.S)
+    op_name_conf = re.compile(r"\)\), (.*?):", re.S)
+    op_name2op_shape = {}
+
+    # get the shape of in-tensors
+    data = re.finditer("OPERATOR:.*", graph_str)
+    for i in data:
+        op_str = re.findall(op_in, i.group())[0].replace(" -> ", "")
+        if op_str == "()":
+            continue
+        op_str = ")), " + op_str.replace("(", "", 1)
+        op_names = re.findall(op_name_conf, op_str)
+        size_strs = re.findall(p_size, op_str)
+        for j, size_str in enumerate(size_strs):
+            size_attr = size_str.replace("size=", "")
+            if size_attr[-2] == ",":
+                size_attr = size_attr.replace(",", "")
+            data_size = tuple(map(int, size_attr[1:-1].split(", ")))
+            op_name2op_shape[op_names[j]] = data_size
+
+    # calculate flops and params
+    flops: int = 0
+    forward_ops = graph._forward_job_proto.net.op
+    for op in forward_ops:
+        if op.WhichOneof("op_type") == "user_conf":
+            attr = op.user_conf.attr
+            input_strs = op.user_conf.input
+            op_type_name = op.user_conf.op_type_name
+            flop += GRAPH_FLOPS_COUNT_FUNC[op_type_name](attr, input_strs, op_name2op_shape)
+
+    return flops, params
+
+
+def get_eager_flops(
     model, 
     input_res,
     print_per_layer_stat=True,

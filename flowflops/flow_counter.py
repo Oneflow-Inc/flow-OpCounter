@@ -10,7 +10,7 @@ import sys
 
 import oneflow.nn as nn
 
-from flowflops.flow_engine import get_flops     
+from flowflops.flow_engine import get_eager_flops, get_graph_flops
 from flowflops.utils import flops_to_string, params_to_string
 
 
@@ -23,7 +23,8 @@ def get_model_complexity_info(
     ost=sys.stdout,
     verbose=False, 
     ignore_modules=[],
-    custom_modules_hooks={}, backend='pytorch',
+    custom_modules_hooks={}, 
+    mode='eager',
     flops_units=None, param_units=None,
     output_precision=2
 ):
@@ -31,8 +32,20 @@ def get_model_complexity_info(
     assert len(input_res) >= 1
     assert isinstance(model, nn.Module)
 
-    if backend == 'pytorch':
-        flops_count, params_count = get_flops(
+    if mode == 'eager':
+        flops_count, params_count = get_eager_flops(
+            model, 
+            input_res,
+            print_per_layer_stat,
+            input_constructor, ost,
+            verbose, ignore_modules,
+            custom_modules_hooks,
+            output_precision=output_precision,
+            flops_units=flops_units,
+            param_units=param_units
+        )
+    elif mode == 'graph':
+        flops_count, params_count = get_eager_flops(
             model, 
             input_res,
             print_per_layer_stat,
@@ -44,7 +57,7 @@ def get_model_complexity_info(
             param_units=param_units
         )
     else:
-        raise ValueError('Wrong backend name')
+        raise ValueError('Wrong mode name')
 
     if as_strings:
         flops_string = flops_to_string(
