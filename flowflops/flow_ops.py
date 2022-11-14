@@ -337,6 +337,9 @@ GRAPH_FLOPS_COUNT_FUNC = {
     "prelu": pool_flops_counter,
     "hardtanh": scalar_flops_counter,
     "elu": scalar_flops_counter,
+    "silu": scalar_flops_counter,
+    "sigmoid": pool_flops_counter,
+    "sigmoid_v2": pool_flops_counter,
     # add
     "bias_add": bias_add_flops_counter,
     "add_n": add_n_flops_counter,
@@ -365,6 +368,9 @@ GRAPH_FLOPS_COUNT_FUNC = {
     "ones_like": empty_flops_counter,
     "zero_like": empty_flops_counter,
     "flatten": empty_flops_counter,
+    "concat": empty_flops_counter,
+    "transpose": empty_flops_counter,
+    "slice": empty_flops_counter,
 }
 
 MODULES_MAPPING = {

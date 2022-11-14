@@ -54,7 +54,7 @@ def get_graph_flops(
             return self.model(input)
 
     # build graph
-    x = flow.rand(input_res)
+    x = flow.rand(input_res).to(next(model.parameters()).device)
     graph = ModelGraph(model)
     _ = graph(x)
 
@@ -68,7 +68,7 @@ def get_graph_flops(
     # get the shape of in-tensors
     data = re.finditer("OPERATOR:.*", graph_str)
     for i in data:
-        op_str = re.findall(op_in, i.group())[0].replace(" -> ", "")
+        op_str = re.findall(op_in, i.group())[0].replace(" -> ", "").replace("[", "")
         if op_str == "()":
             continue
         op_str = ")), " + op_str.replace("(", "", 1)
@@ -124,12 +124,11 @@ def get_eager_flops(
             batch = flow.ones(()).new_empty(
                 input_res,
                 dtype=next(flops_model.parameters()).dtype,
-                device=next(flops_model.parameters()).device
             )
         except StopIteration:
             batch = flow.ones(()).new_empty(input_res)
 
-        flops_model(batch)
+        flops_model(batch.to(next(flops_model.parameters()).device))
 
     flops_count, params_count = flops_model.compute_average_flops_cost()
     if print_per_layer_stat:
