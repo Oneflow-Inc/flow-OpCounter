@@ -4,7 +4,7 @@ modified from `https://github.com/sovrasov/flops-counter.pytorch`
 
 ## install
 
-> 
+> pip install flowflops
 
 ## usage
 
@@ -203,9 +203,9 @@ supported ops:
 "relu"
 "leaky_relu"
 "prelu"
-"hardtanh": 
-"elu": 
-"silu": 
+"hardtanh"
+"elu"
+"silu"
 "sigmoid"
 "sigmoid_v2"
 # add
@@ -232,11 +232,11 @@ supported ops:
 "broadcast_sub"
 "broadcast_div"
 # empty
-"reshape",
-"ones_like",
-"zero_like",
-"flatten",
-"concat",
-"transpose",
-"slice",
+"reshape"
+"ones_like"
+"zero_like"
+"flatten"
+"concat"
+"transpose"
+"slice"
 ```
