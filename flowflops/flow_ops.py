@@ -14,15 +14,19 @@ import oneflow.nn as nn
 # --------------------------------
 # For Graph
 # --------------------------------
+def empty_flops_counter(module, input, output):
+    return 0
+
+
 def conv_flops_counter(attr, input_strs, op_name2op_shape):
     strides = attr["strides"].at_list_int32.val
     padding = attr["padding_before"].at_list_int32.val
     kernel_size = attr["kernel_size"].at_list_int32.val
+    groups = attr["groups"].at_int32
 
     input_shape = op_name2op_shape[input_strs["in"].s[0]]
     kernel_shape = op_name2op_shape[input_strs["weight"].s[0]]
 
-    batch_size = input_shape[0]
     in_dims = input_shape[2:]
     output_dims = [
         math.ceil((in_dims[0] - kernel_size[0] + 2 * padding[0]) / strides[0]) + 1,
@@ -31,47 +35,59 @@ def conv_flops_counter(attr, input_strs, op_name2op_shape):
     in_channels = input_shape[1]
     out_channels = kernel_shape[0]
 
-    conv_per_position_flops = int(np.prod(kernel_size)) * in_channels * out_channels
-    active_elements_count = batch_size * int(np.prod(output_dims))
+    conv_per_position_flops = int(np.prod(kernel_size) * in_channels * out_channels / groups)
+    active_elements_count = int(np.prod(output_dims))
 
     return int(conv_per_position_flops * active_elements_count)
 
 
 def pool_flops_counter(attr, input_strs, op_name2op_shape):
-    # also broadcast and relu
+    # also broadcast and activate
     input_shape = op_name2op_shape[input_strs["x"].s[0]]
-    return int(np.prod(input_shape))
+    return int(np.prod(input_shape[1:]))
 
 
-# TODO(hujiakui): maybe wrong when `nn.Linear(64, 64)(4, 3, 64, 64)`
 def matmul_flops_counter(attr, input_strs, op_name2op_shape):
     a_shape = op_name2op_shape[input_strs["a"].s[0]]
     b_shape = op_name2op_shape[input_strs["b"].s[0]]
-    return int((np.prod(a_shape) * b_shape[0]) * a_shape[0])
+    return int((np.prod(a_shape) * np.prod(b_shape[:-1])))
 
 
 def add_n_flops_counter(attr, input_strs, op_name2op_shape):
     in_shapes = []
     for v in input_strs["in"].s:
         in_shapes.append(op_name2op_shape[v])
-    return int(np.prod(input_shape) * (len(in_shapes) - 1))
+    return int(np.prod(in_shapes[0]) * (len(in_shapes) - 1))
 
 
 def bias_add_flops_counter(attr, input_strs, op_name2op_shape):
     input_shape = op_name2op_shape[input_strs["a"].s[0]]
-    return int(np.prod(input_shape))
+    return int(np.prod(input_shape[1:]))
+
+
+def broadcast_flops_counter(attr, input_strs, op_name2op_shape):
+    x_shape = op_name2op_shape[input_strs["x"].s[0]]
+    y_shape = op_name2op_shape[input_strs["y"].s[0]]
+    return int(np.prod(y_shape))
 
 
 def normalization_flops_counter(attr, input_strs, op_name2op_shape):
+    flops: int = 0
     input_shape = op_name2op_shape[input_strs["x"].s[0]]
-    flops += int(np.prod(input_shape))
+    flops += int(np.prod(input_shape[1:])) * 2
     if hasattr(input_strs, "moving_mean") and hasattr(input_strs, "moving_variance"):
-        flops += int(np.prod(input_shape))
+        flops += int(np.prod(input_shape[1:])) * 2
+    return int(flops)
 
 
 def scalar_flops_counter(attr, input_strs, op_name2op_shape):
     input_shape = op_name2op_shape[input_strs["in"].s[0]]
-    flops += int(np.prod(input_shape))
+    return int(np.prod(input_shape[1:]))
+
+
+def reduce_flops_counter(attr, input_strs, op_name2op_shape):
+    input_shape = op_name2op_shape[input_strs["input_tensor"].s[0]]
+    return int(np.prod(input_shape[1:]))
 
 
 # --------------------------------
@@ -110,8 +126,16 @@ def pool_flops_counter_hook(module, input, output):
 
 def bn_flops_counter_hook(module, input, output):
     input = input[0]
-
     batch_flops = np.prod(input.shape)
+    if module.affine:
+        batch_flops *= 2
+    module.__flops__ += int(batch_flops)
+
+
+def in_flops_counter_hook(module, input, output):
+    input = input[0]
+    # NOTE(hujiakui): IN splited in oneflow, 5 ops added
+    batch_flops = np.prod(input.shape) + 10 * np.prod(input.shape[:2])
     if module.affine:
         batch_flops *= 2
     module.__flops__ += int(batch_flops)
@@ -307,16 +331,18 @@ GRAPH_FLOPS_COUNT_FUNC = {
     "adaptive_avg_pool1d": pool_flops_counter,
     "adaptive_avg_pool2d": pool_flops_counter,
     "adaptive_avg_pool3d": pool_flops_counter,
-    "broadcast_add": pool_flops_counter,
+    # activate
     "relu": pool_flops_counter,
     "leaky_relu": pool_flops_counter,
     "prelu": pool_flops_counter,
+    "hardtanh": scalar_flops_counter,
     "elu": scalar_flops_counter,
     # add
     "bias_add": bias_add_flops_counter,
     "add_n": add_n_flops_counter,
     # matmul
     "matmul": matmul_flops_counter,
+    "broadcast_matmul": matmul_flops_counter,
     # norm
     "normalization": normalization_flops_counter,
     # scalar
@@ -324,14 +350,21 @@ GRAPH_FLOPS_COUNT_FUNC = {
     "scalar_add": scalar_flops_counter,
     "scalar_sub": scalar_flops_counter,
     "scalar_div": scalar_flops_counter,
-    "var": scalar_flops_counter,
-    "sqrt": scalar_flops_counter,
-    "reduce_sum": scalar_flops_counter,
+    # stats
+    "var": empty_flops_counter,
+    # math
+    "sqrt": empty_flops_counter,
+    "reduce_sum": reduce_flops_counter,
     # broadcast
-    "broadcast_mul": pool_flops_counter,
-    "broadcast_add": pool_flops_counter,
-    "broadcast_sub": pool_flops_counter,
-    "broadcast_div": pool_flops_counter,
+    "broadcast_mul": broadcast_flops_counter,
+    "broadcast_add": broadcast_flops_counter,
+    "broadcast_sub": broadcast_flops_counter,
+    "broadcast_div": broadcast_flops_counter,
+    # empty
+    "reshape": empty_flops_counter,
+    "ones_like": empty_flops_counter,
+    "zero_like": empty_flops_counter,
+    "flatten": empty_flops_counter,
 }
 
 MODULES_MAPPING = {
@@ -363,9 +396,10 @@ MODULES_MAPPING = {
     nn.BatchNorm2d: bn_flops_counter_hook,
     nn.BatchNorm3d: bn_flops_counter_hook,
     # INs
-    nn.InstanceNorm1d: bn_flops_counter_hook,
-    nn.InstanceNorm2d: bn_flops_counter_hook,
-    nn.InstanceNorm3d: bn_flops_counter_hook,
+    nn.InstanceNorm1d: in_flops_counter_hook,
+    nn.InstanceNorm2d: in_flops_counter_hook,
+    nn.InstanceNorm3d: in_flops_counter_hook,
+    # GN TODO(hujiakui)
     nn.GroupNorm: bn_flops_counter_hook,
     # FC
     nn.Linear: linear_flops_counter_hook,

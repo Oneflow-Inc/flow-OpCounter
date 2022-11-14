@@ -45,7 +45,7 @@ def get_model_complexity_info(
             param_units=param_units
         )
     elif mode == 'graph':
-        flops_count, params_count = get_eager_flops(
+        flops_count, params_count = get_graph_flops(
             model, 
             input_res,
             print_per_layer_stat,

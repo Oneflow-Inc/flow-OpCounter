@@ -89,7 +89,7 @@ def get_graph_flops(
             attr = op.user_conf.attr
             input_strs = op.user_conf.input
             op_type_name = op.user_conf.op_type_name
-            flop += GRAPH_FLOPS_COUNT_FUNC[op_type_name](attr, input_strs, op_name2op_shape)
+            flops += GRAPH_FLOPS_COUNT_FUNC[op_type_name](attr, input_strs, op_name2op_shape)
 
     return flops, params
 

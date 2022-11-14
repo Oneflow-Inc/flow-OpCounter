@@ -38,13 +38,13 @@ class TestLayers(unittest.TestCase):
         net = nn.Linear(in_c, out_c, bias=False)
         for mode in ["eager", "graph"]:
             flops, params = get_model_complexity_info(
-                net, (n, 2, 3, in_c),
+                net, (n, 15, in_c),
                 as_strings=False,
                 print_per_layer_stat=False,
                 mode=mode
             )
             assert params == in_c * out_c
-            assert int(flops) == int(n * in_c * out_c * 2 * 3)
+            assert int(flops) == int(n * in_c * out_c * 15)
 
     def test_linear_case2(self):
         for i in range(10):
@@ -58,7 +58,7 @@ class TestLayers(unittest.TestCase):
                     mode=mode
                 )
                 assert params == in_c * out_c + out_c
-                assert int(flops) == n * in_c * out_c + out_c
+                assert int(flops) == n * (in_c * out_c) + out_c
 
     def test_relu(self):
         n, in_c = 1, 100
