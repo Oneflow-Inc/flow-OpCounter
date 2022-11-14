@@ -33,14 +33,14 @@ def get_graph_flops(
     _, params = get_eager_flops(
         model,
         input_res,
-        input_constructor=verbose=False, 
+        input_constructor=input_constructor, 
         ost=ost, 
         ignore_modules=ignore_modules,
         custom_modules_hooks=custom_modules_hooks,
         output_precision=output_precision,
         flops_units=flops_units,
         param_units=param_units,
-        verbose=False
+        verbose=False,
         print_per_layer_stat=False
     )
     model.eval()
