@@ -61,15 +61,15 @@ def get_model_complexity_info(
 
     if as_strings:
         flops_string = flops_to_string(
-            flops_count,
+            int(flops_count),
             units=flops_units,
             precision=output_precision
         )
         params_string = params_to_string(
-            params_count,
+            int(params_count),
             units=param_units,
             precision=output_precision
         )
         return flops_string, params_string
 
-    return flops_count, params_count
+    return int(flops_count), int(params_count)

@@ -1,4 +1,4 @@
-# OneFlow-OpCounter
+# OneFlow-OpCounter | [**简体中文**](README_CN.md)
 
 [![PyPI version](https://img.shields.io/pypi/v/flowflops.svg)](https://pypi.org/project/flowflops/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/flowflops.svg)](https://pypi.org/project/flowflops/)
@@ -114,14 +114,14 @@ class BasicBlock(nn.Module):
 |      alexnet       |  61.1 M  | 718.16 MMac |
 |       vgg11        | 132.86 M |  7.63 GMac  |
 |      vgg11_bn      | 132.87 M |  7.64 GMac  |
-|   squeezenet1_0    |  1.25 M  | 833.14 MMac |
-|   squeezenet1_1    |  1.24 M  | 356.25 MMac |
-|      resnet18      | 11.69 M  |  1.86 GMac  |
-|      resnet50      | 25.56 M  |  4.24 GMac  |
-|  resnext50_32x4d   | 25.03 M  |  4.34 GMac  |
-| shufflenet_v2_x0_5 |  1.37 M  |  43.92 MMac |
-|   regnet_x_16gf    | 54.28 M  |  16.17 GMac |
-|  efficientnet_b0   |  5.29 M  | 411.17 MMac |
+|   squeezenet1_0    |  1.25 M  | 830.05 MMac |
+|   squeezenet1_1    |  1.24 M  | 355.86 MMac |
+|      resnet18      | 11.69 M  |  1.82 GMac  |
+|      resnet50      | 25.56 M  |  4.13 GMac  |
+|  resnext50_32x4d   | 25.03 M  |  4.28 GMac  |
+| shufflenet_v2_x0_5 |  1.37 M  |  43.7 MMac  |
+|   regnet_x_16gf    | 54.28 M  |  16.02 GMac |
+|  efficientnet_b0   |  5.29 M  | 410.35 MMac |
 |    densenet121     |  7.98 M  |  2.88 GMac  |
 +--------------------+----------+-------------+
 ```
