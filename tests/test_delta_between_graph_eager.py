@@ -2,6 +2,7 @@ import pytest
 import unittest
 import oneflow as flow
 import oneflow.nn as nn
+import flowvision
 
 import sys
 sys.path.append("./")
@@ -62,7 +63,26 @@ class TestLayers(unittest.TestCase):
             )
             flops_in_different_modes[mode] = int(flops)
         assert flops_in_different_modes["eager"] == flops_in_different_modes["graph"]
-        # print(flops_in_different_modes)
+    
+    def test_resnet(self):
+        net = flowvision.models.resnet18()
+        flops_in_different_modes = dict()
+        for mode in ["eager", "graph"]:
+            flops, _ = get_model_complexity_info(
+                net, (4, 3, 224, 224),
+                as_strings=False,
+                print_per_layer_stat=False,
+                mode=mode
+            )
+            flops_in_different_modes[mode] = int(flops)
+        print(flops_in_different_modes)
+        assert int(flops_in_different_modes["graph"]) - int(flops_in_different_modes["eager"]) == 2 * (
+            256 * 56 * 56 + \
+            512 * 28 * 28 + \
+            1024 * 14 * 14 + \
+            2048 * 7 * 7
+        )
+
 
 
 if __name__ == "__main__":

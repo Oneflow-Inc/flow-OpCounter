@@ -28,10 +28,12 @@ def conv_flops_counter(attr, input_strs, op_name2op_shape):
     kernel_shape = op_name2op_shape[input_strs["weight"].s[0]]
 
     in_dims = input_shape[2:]
-    output_dims = [
-        math.ceil((in_dims[0] - kernel_size[0] + 2 * padding[0]) / strides[0]) + 1,
-        math.ceil((in_dims[1] - kernel_size[1] + 2 * padding[1]) / strides[1]) + 1
-    ]
+    output_dims = []
+    for i, in_dim in enumerate(in_dims):
+        d = math.ceil((in_dim - kernel_size[i] + 2 * padding[i]) / strides[i]) + 1
+        if (in_dim - kernel_size[i] + 2 * padding[i]) % strides[i] != 0:
+            d -= 1
+        output_dims.append(d)
     in_channels = input_shape[1]
     out_channels = kernel_shape[0]
 
