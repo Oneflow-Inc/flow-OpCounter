@@ -1,10 +1,16 @@
 # OneFlow-OpCounter
 
+[![PyPI version](https://img.shields.io/pypi/v/flowflops.svg)](https://pypi.org/project/flowflops/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/flowflops.svg)](https://pypi.org/project/flowflops/)
+[![PyPI license](https://img.shields.io/pypi/l/flowflops.svg)](https://pypi.org/project/flowflops/)
+
 modified from `https://github.com/sovrasov/flops-counter.pytorch`
 
 ## install
 
-> pip install flowflops
+```shell
+pip install flowflops
+```
 
 ## usage
 
