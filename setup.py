@@ -11,7 +11,7 @@ readme = open("README.md").read()
 VERSION = "0.0.1"
 
 requirements = [
-    "oneflow",
+    # "oneflow",
 ]
 
 # import subprocess
